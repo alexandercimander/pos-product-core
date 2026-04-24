@@ -35,6 +35,11 @@ Dieser Starter wurde aus dem aktuellen Monolithen herausgeschnitten und enthaelt
 3. echte Datenbank statt reinem JSON-Store vorbereiten
 4. Admin- und Runtime-Consumer ueber stabile API-Vertraege anbinden
 
+## Vertiefende Dokumentation
+
+- `docs/DOCUMENT_STORAGE.md`
+- `docs/DATABASE_VERSIONING.md`
+
 ## Lokaler Start
 
 ```bash

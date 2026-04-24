@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     artifacts_root: Path = Path(__file__).resolve().parents[3] / "artifacts"
     storage_root: Path = Path(__file__).resolve().parents[3] / "storage"
+    document_storage_provider: str = "filesystem"
+    document_storage_cache_root: Path = Path(__file__).resolve().parents[3] / "tmp"
+    document_storage_azure_connection_string: str = ""
+    document_storage_azure_container: str = "documents"
     database_url: str = "sqlite:///./pos-product-core.db"
     external_request_timeout_seconds: int = 10
     external_basic_username: str = ""

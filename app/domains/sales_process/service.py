@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from app.core.bindings import resolve_binding
 from app.core.config import settings
 from app.core.external_http import post_json
+from app.document_storage import build_document_storage
 from app.domains.document_output.service import document_output_service
 from app.domains.sales_process.schemas import (
     ArchiveSalesProcessRequest,
@@ -45,6 +46,7 @@ class SalesProcessService:
     def __init__(self) -> None:
         self.repository = JsonStoreRepository(settings.storage_root)
         self.artifact_repository = ArtifactRepository(settings.artifacts_root)
+        self.document_storage = build_document_storage(settings)
         payload = self.repository.read("sales_processes.json")
         self._store: dict[str, SalesProcess] = {}
         self._search_index: dict[str, str] = {}
@@ -1825,20 +1827,20 @@ class SalesProcessService:
         process: SalesProcess,
         document: GeneratedDocumentRecord,
     ) -> None:
-        target = settings.storage_root / document.storage_reference
-        target.parent.mkdir(parents=True, exist_ok=True)
         pdf_bytes = self._build_pdf_bytes(
             process,
             document.document_kind,
             document.summary,
             document.input_snapshot,
         )
-        target.write_bytes(pdf_bytes)
+        self.document_storage.write_bytes(
+            document.storage_reference,
+            pdf_bytes,
+            content_type=document.mime_type,
+        )
 
     def _write_document_bytes(self, storage_reference: str, content: bytes) -> None:
-        target = settings.storage_root / storage_reference
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(content)
+        self.document_storage.write_bytes(storage_reference, content)
 
     def _execute_external_document(
         self,
@@ -1944,10 +1946,12 @@ class SalesProcessService:
         document = next((item for item in process.generated_documents if item.id == document_id), None)
         if document is None:
             raise HTTPException(status_code=404, detail="Dokument nicht gefunden.")
-        target = settings.storage_root / document.storage_reference
-        if not target.exists():
+        if not self.document_storage.exists(document.storage_reference):
             self._write_generated_pdf(process, document)
-        return target
+        return self.document_storage.materialize(
+            document.storage_reference,
+            filename_hint=document.file_name,
+        )
 
     def get_document_response(
         self,
@@ -1963,12 +1967,14 @@ class SalesProcessService:
         document_kind: str | None = None,
     ) -> Path:
         process, document = self._find_document(document_id, document_kind)
-        target = settings.storage_root / document.storage_reference
-        if not target.exists():
+        if not self.document_storage.exists(document.storage_reference):
             if document.mode == "EXTERNAL":
                 raise HTTPException(status_code=404, detail="Dokumentdatei nicht gefunden.")
             self._write_generated_pdf(process, document)
-        return target
+        return self.document_storage.materialize(
+            document.storage_reference,
+            filename_hint=document.file_name,
+        )
 
     def upload_case_file_document(
         self,
@@ -2027,9 +2033,12 @@ class SalesProcessService:
     def download_uploaded_document(self, process_id: str, upload_id: str) -> tuple[Path, str]:
         process = self._store[process_id]
         document = self._find_uploaded_document(process, upload_id)
-        target = settings.storage_root / document.storage_reference
-        if not target.exists():
+        if not self.document_storage.exists(document.storage_reference):
             raise HTTPException(status_code=404, detail="Datei zum hochgeladenen Dokument nicht gefunden.")
+        target = self.document_storage.materialize(
+            document.storage_reference,
+            filename_hint=document.file_name,
+        )
         return target, document.mime_type
 
     def create(self, request: CreateSalesProcessRequest) -> SalesProcess:
