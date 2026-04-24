@@ -1,0 +1,18 @@
+[project]
+name = "pos-product-core"
+version = "0.1.0"
+description = "PoS Product Core for tariffs, health questions, proposals, applications and sales processes"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0",
+  "uvicorn>=0.30.0",
+  "sqlmodel>=0.0.22",
+  "pydantic-settings>=2.6.0",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["app"]
