@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     document_storage_azure_connection_string: str = ""
     document_storage_azure_container: str = "documents"
     database_url: str = "sqlite:///./pos-product-core.db"
+    database_auto_create_tables: bool = True
     external_request_timeout_seconds: int = 10
     external_basic_username: str = ""
     external_basic_password: str = ""
