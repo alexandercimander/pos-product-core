@@ -40,22 +40,32 @@ from app.domains.tariffs.calculation import calculate_tariff_payable_price
 from app.domains.tariffs.service import tariff_service
 from app.repositories.artifact_repository import ArtifactRepository
 from app.repositories.json_store_repository import JsonStoreRepository
+from app.repositories.sales_process_db_repository import SalesProcessDbRepository
 
 
 class SalesProcessService:
     def __init__(self) -> None:
         self.repository = JsonStoreRepository(settings.storage_root)
+        self.db_repository = SalesProcessDbRepository()
         self.artifact_repository = ArtifactRepository(settings.artifacts_root)
         self.document_storage = build_document_storage(settings)
-        payload = self.repository.read("sales_processes.json")
         self._store: dict[str, SalesProcess] = {}
         self._search_index: dict[str, str] = {}
         self._status_index: dict[str, set[str]] = {}
         self._input_channel_index: dict[str, set[str]] = {}
         self._retention_policy_cache: dict[tuple[str, str], dict[str, object]] = {}
+
+        payload = self.db_repository.load_all()
+        if not payload:
+            raw_payload = self.repository.read("sales_processes.json")
+            payload = {
+                process_id: SalesProcess.model_validate(process)
+                for process_id, process in raw_payload.items()
+            }
+
         for process_id, process in payload.items():
             self._store[process_id] = self._normalize_loaded_process(
-                SalesProcess.model_validate(process)
+                process if isinstance(process, SalesProcess) else SalesProcess.model_validate(process)
             )
         self._persist()
 
@@ -63,6 +73,10 @@ class SalesProcessService:
         self.repository.write(
             "sales_processes.json",
             {key: value.model_dump(mode="json") for key, value in self._store.items()},
+        )
+        self.db_repository.replace_all(
+            self._store,
+            document_storage_provider=settings.document_storage_provider,
         )
         self._rebuild_indices()
 

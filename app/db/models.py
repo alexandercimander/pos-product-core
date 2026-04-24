@@ -72,6 +72,7 @@ class GeneratedDocumentTable(SQLModel, table=True):
     id: str = Field(sa_column=Column(String(128), primary_key=True))
     sales_process_id: str = Field(sa_column=Column(String(64), index=True, nullable=False))
     document_kind: str = Field(sa_column=Column(String(32), index=True, nullable=False))
+    mode: str = Field(default="GENERATED", sa_column=Column(String(32), nullable=False))
     variant: str = Field(sa_column=Column(String(64), nullable=False))
     version_number: int = Field(default=1, sa_column=Column(Integer, nullable=False))
     mime_type: str = Field(default="application/pdf", sa_column=Column(String(128), nullable=False))
